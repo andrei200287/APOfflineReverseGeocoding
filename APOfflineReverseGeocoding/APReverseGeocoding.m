@@ -9,6 +9,12 @@
 #import "APReverseGeocoding.h"
 #import "APPolygon.h"
 
+#if SWIFT_PACKAGE
+// Declare the SPM resource bundle accessor function
+// This function is provided by SPM's automatically generated resource_bundle_accessor
+extern NSBundle* APOfflineReverseGeocoding_SWIFTPM_MODULE_BUNDLE(void);
+#endif
+
 static NSString *const APReverseGeocodingDefaultDBName = @"countries.geo";
 static NSString *const APReverseGeocodingCountriesKey  = @"features";
 
@@ -23,8 +29,47 @@ static NSString *const APReverseGeocodingCountriesKey  = @"features";
 
 + (instancetype)defaultGeocoding
 {
-    NSBundle *bundle = [NSBundle bundleForClass:[self class]];
-    NSURL *url = [bundle URLForResource:APReverseGeocodingDefaultDBName withExtension:@"json"];
+    NSURL *url = nil;
+    
+#if SWIFT_PACKAGE
+    // Swift Package Manager: use the resource bundle accessor function
+    // This function is provided by SPM's automatically generated resource_bundle_accessor
+    NSBundle *bundle = APOfflineReverseGeocoding_SWIFTPM_MODULE_BUNDLE();
+    
+    // Try to find the resource in the SPM bundle
+    if (bundle != nil) {
+        url = [bundle URLForResource:APReverseGeocodingDefaultDBName withExtension:@"json"];
+    }
+    
+    // If not found, try to find the resource bundle by name
+    if (url == nil) {
+        NSString *bundleName = @"APOfflineReverseGeocoding_APOfflineReverseGeocoding";
+        NSURL *bundleURL = [[NSBundle mainBundle] URLForResource:bundleName withExtension:@"bundle"];
+        if (bundleURL == nil) {
+            bundleURL = [[NSBundle bundleForClass:[self class]] URLForResource:bundleName withExtension:@"bundle"];
+        }
+        if (bundleURL != nil) {
+            bundle = [NSBundle bundleWithURL:bundleURL];
+            url = [bundle URLForResource:APReverseGeocodingDefaultDBName withExtension:@"json"];
+        }
+    }
+    
+    // Also try main bundle and class bundle directly (SPM sometimes puts resources there)
+    if (url == nil) {
+        url = [[NSBundle mainBundle] URLForResource:APReverseGeocodingDefaultDBName withExtension:@"json"];
+    }
+    if (url == nil) {
+        NSBundle *classBundle = [NSBundle bundleForClass:[self class]];
+        url = [classBundle URLForResource:APReverseGeocodingDefaultDBName withExtension:@"json"];
+    }
+#endif
+    
+    // Fallback to class bundle (for CocoaPods or manual integration)
+    if (url == nil) {
+        NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+        url = [bundle URLForResource:APReverseGeocodingDefaultDBName withExtension:@"json"];
+    }
+    
     return [self geocodingWithGeoJSONURL:url];
 }
 
